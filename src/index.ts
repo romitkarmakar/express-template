@@ -7,6 +7,7 @@ import cluster from "cluster";
 import helmet from "./middlewares/helmet";
 import cors from "./middlewares/cors";
 import logging from "./middlewares/logging"
+import fs from "fs";
 
 if (cluster.isMaster) {
   let cpuCount: number = require("os").cpus().length;
@@ -21,6 +22,8 @@ if (cluster.isMaster) {
   app.use(helmet);
   app.use(logging)
 
+  app.locals.logStream = fs.createWriteStream("combined.log", { flags: 'a' });
+
   app.get("/", (req: Request, res: Response) => {
     return res.send({
       status: "online",
@@ -30,6 +33,10 @@ if (cluster.isMaster) {
 
   const server = http.createServer(app);
   const PORT = process.env.PORT || 8000;
+
+  process.on('SIGINT', function () {
+    app.locals.logStream.close();
+  })
 
   server.listen(PORT, () => console.log(`Server started at port ${PORT}`));
 }
